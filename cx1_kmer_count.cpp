@@ -227,13 +227,6 @@ void init_global_and_set_cx1(count_global_t &globals) {
         xlog("%d words per substring, %d words per edge\n", globals.words_per_substring, globals.words_per_edge);
     }
 
-    // FILE *buc = fopen("bucket.txt", "w");
-    // fprintf(buc, "avg %lld\n", globals.tot_bucket_size/ num_non_empty);
-    // for (int i = 0; i < kNumBuckets; ++i) {
-    //     fprintf(buc, "%d %lld\n", i, globals.cx1.bucket_sizes_[i]);
-    // }
-    // fclose(buc);
-
 #ifdef USE_GPU
     globals.cx1.lv1_just_go_ = false;
     int64_t lv2_mem = globals.gpu_mem - 1073741824; // should reserver ~1G for GPU sorting
@@ -383,6 +376,7 @@ void init_global_and_set_cx1(count_global_t &globals) {
     globals.edge_counting = (int64_t *) MallocAndCheck((kMaxMulti_t + 1) * sizeof(int64_t), __FILE__, __LINE__);
     globals.thread_edge_counting = (int64_t *) MallocAndCheck((kMaxMulti_t + 1) * globals.num_output_threads * sizeof(int64_t), __FILE__, __LINE__);
     memset(globals.edge_counting, 0, (kMaxMulti_t + 1) * sizeof(int64_t));
+    memset(globals.thread_edge_counting, 0, (kMaxMulti_t + 1) * globals.num_output_threads * sizeof(int64_t));
 
     // --- initialize lock ---
     pthread_mutex_init(&globals.lv1_items_scanning_lock, NULL); // init lock
