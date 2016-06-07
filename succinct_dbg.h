@@ -74,7 +74,7 @@ class SuccinctDBG {
         rs_last_.Build(last_, size);
 
         for (int i = 1; i < kAlphabetSize + 2; ++i) {
-            rank_f_[i] = rs_last_.Rank(f_[i] - 1);
+            rank_f_[i] = i < 1 ? 0 : rs_last_.Rank(f_[i] - 1);
         }
 
         for (int64_t i = 0; i < size; ++i) {

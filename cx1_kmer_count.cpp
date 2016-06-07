@@ -869,7 +869,7 @@ void post_proc(count_global_t &globals) {
     }
 
     if (cx1_t::kCX1Verbose >= 2) {
-        xlog("Total number of solid edges: %llu\n", num_solid_edges);
+        xlog("Total number of solid edges: %lld\n", (long long)num_solid_edges);
     }
 
     FILE *counting_file = OpenFileAndCheck((globals.output_prefix + ".counting").c_str(), "w");
