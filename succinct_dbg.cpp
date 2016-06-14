@@ -93,6 +93,9 @@ int SuccinctDBG::OutgoingEdges(int64_t edge_id, int64_t *outgoings) {
     }
     while (next_edge >= 0 && !IsLastOrTip(next_edge));
 
+    if (UNLIKELY(outdegree > 4)) {
+        fprintf(stderr, "%lld\n", edge_id);
+    }
     return outdegree;
 }
 

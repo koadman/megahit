@@ -464,6 +464,8 @@ uint32_t UnitigGraph::MergeBubbles(bool permanent_rm, bool careful, FILE *bubble
     }
     omp_destroy_lock(&output_lock);
 
+    xlog("Done! Refreshing!\n");
+
     Refresh_(!permanent_rm);
     return num_removed;
 }
@@ -734,6 +736,8 @@ void UnitigGraph::Refresh_(bool set_changed) {
         }
     }
 
+    xlog("Setting invalid edges done\n");
+
     #pragma omp parallel for
 
     for (vertexID_t i = 0; i < vertices_.size(); ++i) {
@@ -835,6 +839,8 @@ void UnitigGraph::Refresh_(bool set_changed) {
         }
     }
 
+    xlog("Refreshing non-loop paths done.\n");
+
     // looped path
     #pragma omp parallel for
 
@@ -889,6 +895,8 @@ void UnitigGraph::Refresh_(bool set_changed) {
         }
     }
 
+    xlog("Refreshing loop paths done.\n");
+
     #pragma omp parallel for
 
     for (vertexID_t i = 0; i < vertices_.size(); ++i) {
@@ -901,11 +909,15 @@ void UnitigGraph::Refresh_(bool set_changed) {
         }
     }
 
+    xlog("Refreshing start node map done.\n");
+
     #pragma omp parallel for
 
     for (vertexID_t i = 0; i < vertices_.size(); ++i) {
         omp_unset_lock(&locks_[i]);
     }
+
+    xlog("Unset locks done.\n");
 
     omp_destroy_lock(&reassemble_lock);
 }
