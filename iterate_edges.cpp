@@ -191,7 +191,7 @@ static void *ReadReadsThread(void *seq_manager) {
     int64_t kMaxNumBases = 1 << 28;
     bool append = false;
     bool reverse = false;
-    sm->ReadShortReads(kMaxNumReads, kMaxNumBases, append, reverse);
+    sm->ReadShortReads(kMaxNumReads, kMaxNumBases, 0, append, reverse);
 
     // if (sm->package_->size() > 0) {
     //     for (unsigned i = 0; i < sm->package_->length(0); ++i) {

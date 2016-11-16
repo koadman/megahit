@@ -174,7 +174,7 @@ static void *MercyInputThread(void *seq_manager) {
     int64_t kMaxBases = 1 << 28;
     bool append = false;
     bool reverse = false;
-    sm->ReadShortReads(kMaxReads, kMaxBases, append, reverse);
+    sm->ReadShortReads(kMaxReads, kMaxBases, 0, append, reverse);
     // printf("Processing %d reads\n", sm->package_->size());
 
     // if (sm->package_->size() > 0) {

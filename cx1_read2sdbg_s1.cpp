@@ -130,7 +130,7 @@ void s1_read_input_prepare(read2sdbg_global_t &globals) {
         bool append_to_package = true;
         bool trimN = false;
 
-        seq_manager.ReadShortReads(1LL << 60, 1LL << 60, append_to_package, reverse_read, trimN);
+        seq_manager.ReadShortReads(1LL << 60, 1LL << 60, 0, append_to_package, reverse_read, trimN);
         seq_manager.clear();
     }
 

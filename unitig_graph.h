@@ -53,6 +53,7 @@ struct UnitigGraphVertex {
     bool is_loop: 1;
     uint32_t length: 30;
     bool is_palindrome: 1;
+    std::vector<float> sample_depths;
 
     UnitigGraphVertex ReverseComplement() {
         UnitigGraphVertex ret = *this;
@@ -81,6 +82,7 @@ class UnitigGraph {
     }
 
     void InitFromSdBG();
+    void ComputeSampleDepths(std::vector<SuccinctDBG>& sample_sdbg, const std::string& depth_out_fname);
     uint32_t size() {
         return vertices_.size();
     }

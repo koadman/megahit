@@ -43,6 +43,7 @@ struct count_opt_t {
     std::string output_prefix;
     int mem_flag;
     bool need_mercy;
+    int which_lib;
 
     count_opt_t() {
         kmer_k = 21;
@@ -55,6 +56,7 @@ struct count_opt_t {
         output_prefix = "out";
         mem_flag = 1;
         need_mercy = true;
+        which_lib = -1;
     }
 };
 
@@ -91,6 +93,7 @@ struct count_global_t {
     std::string read_lib_file;
     std::string assist_seq_file;
     std::string output_prefix;
+    int which_lib;
 
     int words_per_edge; // number of (32-bit) words needed to represent a (k+1)-mer
     int64_t words_per_substring; // substrings to be sorted by GPU

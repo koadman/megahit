@@ -107,7 +107,7 @@ inline void trimN(const char *s, int len, int &out_bpos, int &out_epos) {
     out_epos = i;
 }
 
-int64_t SequenceManager::ReadShortReads(int64_t max_num, int64_t max_num_bases, bool append, bool reverse, bool trimN, std::string file_name) {
+int64_t SequenceManager::ReadShortReads(int64_t max_num, int64_t max_num_bases, int64_t skip_n, bool append, bool reverse, bool trimN, std::string file_name) {
     if (!append) {
         package_->clear();
     }
@@ -187,7 +187,7 @@ int64_t SequenceManager::ReadShortReads(int64_t max_num, int64_t max_num_bases, 
     else if (f_type == kBinaryReads) {
         uint32_t read_len;
 
-        for (int64_t i = 0; i < max_num; ++i) {
+        for (int64_t i = 0; i < skip_n + max_num; ++i) {
             if (gzread(files_[0], &read_len, sizeof(read_len)) == 0) {
                 return i;
             }
@@ -200,6 +200,8 @@ int64_t SequenceManager::ReadShortReads(int64_t max_num, int64_t max_num_bases, 
 
             assert((unsigned)gzread(files_[0], &buf_[0], sizeof(uint32_t) * num_words) == num_words * sizeof(uint32_t));
 
+            if (i<skip_n)
+                continue;
             if (!reverse) {
                 package_->AppendSeq(&buf_[0], read_len);
             }
@@ -257,7 +259,6 @@ int64_t SequenceManager::ReadEdges(int64_t max_num, bool append) {
 
     assert(false);
 }
-
 
 int64_t SequenceManager::ReadEdgesWithFixedLen(int64_t max_num, bool append) {
     if (!append) {

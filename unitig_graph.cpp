@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <fstream>
 
 #include "utils.h"
 #include "definitions.h"
@@ -354,6 +355,98 @@ void UnitigGraph::InitFromSdBG() {
     }
 
     omp_destroy_lock(&path_lock);
+}
+
+void UnitigGraph::ComputeSampleDepths(vector<SuccinctDBG>& sample_sdbg, const std::string& depth_out_fname) {
+    uint8_t ltab[256];
+    ltab['A']=1;
+    ltab['C']=2;
+    ltab['G']=3;
+    ltab['T']=4;
+    vector< std::pair< int64_t, int64_t > > adj_list;
+
+    for (vertexID_t i = 0; i < vertices_.size(); ++i) {
+        if (vertices_[i].is_deleted) {
+            continue;
+        }
+        string label = VertexToDNAString(sdbg_, vertices_[i]);
+        size_t s_kmer_k = sample_sdbg[0].kmer_k;
+        vertices_[i].sample_depths.resize(sample_sdbg.size(), 0); // init to zeros
+
+//        std::cerr << "Node " << i << std::endl;
+
+        int target_count = 1000; // extract per-sample depths for up to this many k-mers, evenly spaced through the unitig
+        int step = label.size()/target_count;
+        step = step > 1 ? step : 1;
+        float kmers_used = 0;
+        int start=label.size() > s_kmer_k ? 1 : 0; 
+        for(size_t j=start; j<=label.size()-s_kmer_k; j+=step){
+            // extract the DNA k-mer and convert back to numeric sequence k-mer
+            string ss=label.substr(j,s_kmer_k);
+            uint8_t seq[s_kmer_k];
+            for(size_t z=0; z<s_kmer_k; z++){
+                seq[z]=ltab[(uint8_t)ss[z]];
+            }
+            // find the k-mer in each of the samples
+            for(size_t s=0; s<sample_sdbg.size(); s++){
+                int64_t eidx_s = sample_sdbg[s].Index(seq);
+                int64_t d = 0;
+                if(eidx_s>=0){
+                    d = sample_sdbg[s].EdgeMultiplicity(eidx_s);
+                }
+//                std::cerr << d << ",";
+                vertices_[i].sample_depths[s] += d;
+            }
+//            std::cerr << std::endl;
+            kmers_used++;
+        }
+//        std::cerr << std::endl;
+//        std::cerr << std::endl;
+        for(size_t s=0; s<sample_sdbg.size(); s++){
+            vertices_[i].sample_depths[s] /= kmers_used;
+        }
+
+        // find adjacencies
+        for (int strand = 0; strand < 2; ++strand) {
+            int64_t outgoings[4];
+            int outdegree = sdbg_->OutgoingEdges(strand == 0 ? vertices_[i].end_node : vertices_[i].rev_end_node, outgoings);
+
+            // don't bother with this one unless it forks
+            if (outdegree < 1) { continue; }
+
+            for (int j = 0; j < outdegree; ++j) {
+                auto next_vertex_iter = start_node_map_.find(outgoings[j]);
+                int64_t rmult = vertices_[next_vertex_iter->second].start_node == outgoings[j] ? 1 : -1;
+                adj_list.push_back(std::make_pair(strand == 0 ? (int64_t)i : -(int64_t)i, rmult * (int64_t)next_vertex_iter->second));
+            }
+        }
+    }
+
+    std::ofstream depth_out(depth_out_fname.c_str());
+
+    // write the unitig depths for each sample
+    depth_out << "V<-" << vertices_.size() << std::endl;
+    depth_out << "S<-" << sample_sdbg.size() << std::endl;
+    depth_out << "depths<-c";
+    char sep = '(';
+    for (vertexID_t i = 0; i < vertices_.size(); ++i) {
+        for(size_t s=0; s<sample_sdbg.size(); s++){
+            depth_out << sep << vertices_[i].sample_depths[s];
+            sep = ',';
+        }
+    }
+    depth_out << ")\n";
+    sep = '(';
+    depth_out << "adjacencies<-c";
+    for (size_t i=0; i<adj_list.size(); i++){
+        depth_out << sep << adj_list[i].first;
+        sep = ',';
+        depth_out << sep << adj_list[i].second;
+    }
+    depth_out << ")\n";
+    depth_out.close();
+
+    
 }
 
 uint32_t UnitigGraph::MergeBubbles(bool permanent_rm, bool careful, FILE *bubble_file, Histgram<int64_t> &hist) {

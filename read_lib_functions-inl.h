@@ -89,7 +89,7 @@ inline void ReadMultipleLibs(const std::string &lib_file, SequencePackage &packa
         }
 
         int64_t start = package.size();
-        seq_manager.ReadShortReads(1LL << 60, 1LL << 60, append_to_package, is_reverse, trimN, metadata);
+        seq_manager.ReadShortReads(1LL << 60, 1LL << 60, 0, append_to_package, is_reverse, trimN, metadata);
         seq_manager.clear();
         int64_t end = package.size() - 1;
 
@@ -180,7 +180,7 @@ inline void ReadAndWriteMultipleLibs(const std::string &lib_file, bool is_revers
         int max_read_len = 0;
 
         while (true) {
-            reads_this_batch = seq_manager.ReadShortReads(reads_per_bach, bases_per_bach, false, is_reverse, trimN, metadata);
+            reads_this_batch = seq_manager.ReadShortReads(reads_per_bach, bases_per_bach, 0, false, is_reverse, trimN, metadata);
 
             if (reads_this_batch == 0) {
                 break;
@@ -231,7 +231,7 @@ inline void GetBinaryLibSize(const std::string &file_prefix, int64_t &total_base
 }
 
 inline void ReadBinaryLibs(const std::string &file_prefix, SequencePackage &package, std::vector<lib_info_t> &lib_info,
-                           bool is_reverse = false, bool append_to_package = false) {
+                           bool is_reverse = false, bool append_to_package = false, int which_lib = -1) {
     std::ifstream lib_info_file(file_prefix + ".lib_info");
     int64_t start, end;
     int max_read_len;
@@ -241,12 +241,20 @@ inline void ReadBinaryLibs(const std::string &file_prefix, SequencePackage &pack
     assert(lib_info_file >> total_bases >> num_reads);
     std::getline(lib_info_file, metadata); // eliminate the "\n"
 
+    int lib_i = 0;
     while (std::getline(lib_info_file, metadata)) {
         assert(lib_info_file >> start >> end >> max_read_len >> pe_or_se);
-        lib_info.push_back(lib_info_t(&package, start, end, max_read_len, pe_or_se == "pe", metadata));
+        if(which_lib == -1 || which_lib == lib_i){
+            lib_info.push_back(lib_info_t(&package, start, end, max_read_len, pe_or_se == "pe", metadata));
+        }
         std::getline(lib_info_file, metadata); // eliminate the "\n"
+        lib_i++;
     }
 
+    if(which_lib != -1){
+        num_reads = lib_info[0].to-lib_info[0].from+1;
+        total_bases = num_reads*lib_info[0].max_read_len;
+    }
     package.reserve_num_seq(num_reads);
     package.reserve_bases(total_bases);
     SequenceManager seq_manager(&package);
@@ -255,7 +263,11 @@ inline void ReadBinaryLibs(const std::string &file_prefix, SequencePackage &pack
 
     xlog("Before reading, sizeof seq_package: %lld\n", package.size_in_byte());
 
-    seq_manager.ReadShortReads(1LL << 60, 1LL << 60, append_to_package, is_reverse);
+    if(which_lib==-1){
+        seq_manager.ReadShortReads(1LL << 60, 1LL << 60, 0, append_to_package, is_reverse);
+    }else{
+        seq_manager.ReadShortReads(num_reads, 1LL << 60, lib_info[0].from, append_to_package, is_reverse);
+    }
 
     xlog("After reading, sizeof seq_package: %lld\n", package.size_in_byte());
 }

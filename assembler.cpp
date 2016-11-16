@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
+#include <sstream>
 
 #include "succinct_dbg.h"
 #include "assembly_algorithms.h"
@@ -53,6 +54,7 @@ struct asm_opt_t {
     bool careful_bubble;
     bool regular_asm;
     bool auto_depth;
+    int factorize;
 
     asm_opt_t() {
         output_prefix = "out";
@@ -69,6 +71,7 @@ struct asm_opt_t {
         output_standalone = false;
         careful_bubble = false;
         auto_depth = false;
+        factorize = 0;
     }
 
     string contig_file() {
@@ -108,6 +111,7 @@ void ParseAsmOption(int argc, char *argv[]) {
     desc.AddOption("is_final_round", "", opt.is_final_round, "this is the last iteration");
     desc.AddOption("output_standalone", "", opt.output_standalone, "output standalone contigs to *.final.contigs.fa");
     desc.AddOption("careful_bubble", "", opt.careful_bubble, "remove bubble carefully");
+    desc.AddOption("factorize_covariants", "", opt.factorize, "Factorize the graph into covarying subgraphs (e.g. strains) using N libraries");
 
     try {
         desc.Parse(argc, argv);
@@ -171,6 +175,7 @@ int main_assemble(int argc, char **argv) {
         }
     }
 
+    
     if (opt.max_tip_len > 0) { // tips removal
         timer.reset();
         timer.start();
@@ -186,6 +191,24 @@ int main_assemble(int argc, char **argv) {
     unitig_graph.InitFromSdBG();
     timer.stop();
     xlog("unitig graph size: %u, time for building: %lf\n", unitig_graph.size(), timer.elapsed());
+
+    if (opt.factorize>0) { // factorize the graph into strain components
+        int num_samples = opt.factorize;
+        vector<SuccinctDBG> dbg_s(num_samples);
+
+        for(int i=0; i<num_samples; i++){
+            std::ostringstream sdbg_name_ss;
+            sdbg_name_ss << opt.sdbg_name << "." << i; 
+            xlog("Loading succinct de Bruijn graph: %s ", sdbg_name_ss.str().c_str());
+            dbg_s[i].LoadFromMultiFile(sdbg_name_ss.str().c_str(), true);
+            xlog_ext("Done.\n");
+            xlog("Number of Edges: %lld; K value: %d\n", (long long)dbg_s[i].size, dbg_s[i].kmer_k);
+        }
+        std::string depth_out_fname = opt.sdbg_name + ".unitig_depths.Rdata";
+        unitig_graph.ComputeSampleDepths(dbg_s,depth_out_fname);
+    }
+
+
 
     FILE *bubble_file = OpenFileAndCheck(opt.bubble_file().c_str(), "w");
     Histgram<int64_t> bubble_hist;

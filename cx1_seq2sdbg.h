@@ -47,6 +47,7 @@ struct seq2sdbg_opt_t {
     std::string output_prefix;
     int mem_flag;
     bool need_mercy;
+    int which_lib;
 
     seq2sdbg_opt_t() {
         host_mem = 0;
@@ -63,6 +64,7 @@ struct seq2sdbg_opt_t {
         input_prefix = "";
         output_prefix = "out";
         need_mercy = false;
+        which_lib = -1;
     }
 };
 
@@ -98,6 +100,7 @@ struct seq2sdbg_global_t {
     int64_t gpu_mem;
     int mem_flag;
     bool need_mercy;
+    int which_lib;
 
     std::string contig;
     std::string bubble_seq;

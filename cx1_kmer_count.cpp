@@ -114,7 +114,7 @@ void read_input_prepare(count_global_t &globals) { // num_items_, num_cpu_thread
     globals.package.reserve_num_seq(num_reads);
     globals.package.reserve_bases(num_bases);
 
-    ReadBinaryLibs(globals.read_lib_file, globals.package, globals.lib_info, is_reverse);
+    ReadBinaryLibs(globals.read_lib_file, globals.package, globals.lib_info, is_reverse,false,globals.which_lib);
 
     if (globals.assist_seq_file != "") {
         SequenceManager seq_manager;
@@ -125,7 +125,7 @@ void read_input_prepare(count_global_t &globals) { // num_items_, num_cpu_thread
         bool append_to_package = true;
         bool trimN = false;
 
-        seq_manager.ReadShortReads(1LL << 60, 1LL << 60, append_to_package, reverse_read, trimN);
+        seq_manager.ReadShortReads(1LL << 60, 1LL << 60, 0, append_to_package, reverse_read, trimN);
         seq_manager.clear();
     }
     

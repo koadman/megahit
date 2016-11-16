@@ -538,10 +538,13 @@ def check_builder():
             usg += "\nOr if you want to use the GPU version, please run MEGAHIT with \"--use-gpu\""
         raise Usage(usg)
 
-def graph_prefix(kmer_k):
+def graph_prefix(kmer_k,which_lib):
     if not os.path.exists(opt.temp_dir + "k" + str(kmer_k)):
         os.mkdir(opt.temp_dir + "k" + str(kmer_k))
-    return opt.temp_dir + "k" + str(kmer_k) + "/" + str(kmer_k)
+    base = opt.temp_dir + "k" + str(kmer_k) + "/" + str(kmer_k)
+    if(which_lib > -1):
+        base += "." + str(which_lib)
+    return base
 
 def contig_prefix(kmer_k):
     return opt.contig_dir + "k" + str(kmer_k)
@@ -550,23 +553,23 @@ def delect_file_if_exist(file_name):
     if os.path.exists(file_name):
         os.remove(file_name)
 
-def delete_tmp_after_build(kmer_k):
+def delete_tmp_after_build(kmer_k,which_lib):
     for i in range(0, opt.num_cpu_threads):
-        delect_file_if_exist(graph_prefix(kmer_k) + ".edges." + str(i))
+        delect_file_if_exist(graph_prefix(kmer_k,which_lib) + ".edges." + str(i))
     for i in range(0, 64):
-        delect_file_if_exist(graph_prefix(kmer_k) + ".mercy_cand." + str(i))
+        delect_file_if_exist(graph_prefix(kmer_k,which_lib) + ".mercy_cand." + str(i))
     for i in range(0, opt.num_cpu_threads - 1):
-        delect_file_if_exist(graph_prefix(kmer_k) + ".mercy." + str(i))
-    delect_file_if_exist(graph_prefix(kmer_k) + ".cand")
+        delect_file_if_exist(graph_prefix(kmer_k,which_lib) + ".mercy." + str(i))
+    delect_file_if_exist(graph_prefix(kmer_k,which_lib) + ".cand")
 
-def delete_tmp_after_assemble(kmer_k):
+def delete_tmp_after_assemble(kmer_k,which_lib):
     for extension in ["w", "last", "isd", "dn", "f", "mul", "mul2"]:
-        delect_file_if_exist(graph_prefix(kmer_k) + "." + extension)
+        delect_file_if_exist(graph_prefix(kmer_k,which_lib) + "." + extension)
     for i in range(0, opt.num_cpu_threads):
-        delect_file_if_exist(graph_prefix(kmer_k) + ".sdbg." + str(i))
+        delect_file_if_exist(graph_prefix(kmer_k,which_lib) + ".sdbg." + str(i))
 
-def delete_tmp_after_iter(kmer_k):
-    delect_file_if_exist(graph_prefix(kmer_k) + ".rr.pb")
+def delete_tmp_after_iter(kmer_k,which_lib):
+    delect_file_if_exist(graph_prefix(kmer_k,which_lib) + ".rr.pb")
 
 def write_cp():
     global cp
@@ -725,16 +728,16 @@ def build_lib():
 
     write_cp()
 
-def build_first_graph():
+def build_first_graph(kmer_k, which_lib):
     global cp
     phase1_out_threads = max(1, int(opt.num_cpu_threads / 3))
     if (not opt.continue_mode) or (cp > opt.last_cp):
-        count_opt = ["-k", str(opt.k_min),
+        count_opt = ["-k", str(kmer_k),
                      "-m", str(opt.min_count),
                      "--host_mem", str(opt.host_mem),
                      "--mem_flag", str(opt.mem_flag),
                      "--gpu_mem", str(opt.gpu_mem),
-                     "--output_prefix", graph_prefix(opt.k_min),
+                     "--output_prefix", graph_prefix(kmer_k,which_lib),
                      "--num_cpu_threads", str(opt.num_cpu_threads),
                      "--num_output_threads", str(phase1_out_threads),
                      "--read_lib_file", opt.lib]
@@ -747,11 +750,14 @@ def build_first_graph():
         else:
             cmd = [opt.bin_dir + opt.builder, "count"] + count_opt
 
+        if which_lib != -1:
+            cmd += ["--which_lib",str(which_lib)]
+
         try:
             if opt.kmin_1pass:
-                logging.info("--- [%s] Extracting solid (k+1)-mers and building sdbg for k = %d ---" % (datetime.now().strftime("%c"), opt.k_min))
+                logging.info("--- [%s] Extracting solid (k+1)-mers and building sdbg for k = %d ---" % (datetime.now().strftime("%c"), kmer_k))
             else:
-                logging.info("--- [%s] Extracting solid (k+1)-mers for k = %d ---" % (datetime.now().strftime("%c"), opt.k_min))
+                logging.info("--- [%s] Extracting solid (k+1)-mers for k = %d ---" % (datetime.now().strftime("%c"), kmer_k))
 
             logging.debug("cmd: %s" % (" ").join(cmd))
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -780,17 +786,17 @@ def build_first_graph():
 
     write_cp()
     if not opt.kmin_1pass:
-        build_graph(opt.k_min, 0, phase1_out_threads)
+        build_graph(kmer_k, 0, phase1_out_threads,which_lib)
     elif not opt.keep_tmp_files:
-        delete_tmp_after_build(opt.k_min)
+        delete_tmp_after_build(kmer_k,which_lib)
 
-def build_graph(kmer_k, kmer_from, num_edge_files):
+def build_graph(kmer_k, kmer_from, num_edge_files,which_lib):
     global cp
     if (not opt.continue_mode) or (cp > opt.last_cp):
         build_comm_opt = ["--host_mem", str(opt.host_mem),
                              "--mem_flag", str(opt.mem_flag),
                              "--gpu_mem", str(opt.gpu_mem),
-                             "--output_prefix", graph_prefix(kmer_k),
+                             "--output_prefix", graph_prefix(kmer_k,which_lib),
                              "--num_cpu_threads", str(opt.num_cpu_threads),
                              "-k", str(kmer_k), 
                              "--kmer_from", str(kmer_from),
@@ -800,12 +806,12 @@ def build_graph(kmer_k, kmer_from, num_edge_files):
 
         file_size = 0
 
-        if (os.path.exists(graph_prefix(kmer_k) + ".edges.0")):
-            build_cmd += ["--input_prefix", graph_prefix(kmer_k)]
-            file_size += os.path.getsize(graph_prefix(kmer_k) + ".edges.0")
+        if (os.path.exists(graph_prefix(kmer_k,which_lib) + ".edges.0")):
+            build_cmd += ["--input_prefix", graph_prefix(kmer_k,which_lib)]
+            file_size += os.path.getsize(graph_prefix(kmer_k,which_lib) + ".edges.0")
             tid = 1
-            while (os.path.exists(graph_prefix(kmer_k) + ".edges." + str(tid))):
-                file_size += os.path.getsize(graph_prefix(kmer_k) + ".edges." + str(tid))
+            while (os.path.exists(graph_prefix(kmer_k,which_lib) + ".edges." + str(tid))):
+                file_size += os.path.getsize(graph_prefix(kmer_k,which_lib) + ".edges." + str(tid))
                 tid += 1
 
         if (os.path.exists(contig_prefix(kmer_from) + ".addi.fa")):
@@ -825,6 +831,9 @@ def build_graph(kmer_k, kmer_from, num_edge_files):
 
         if not opt.no_mercy and kmer_k == opt.k_min:
             build_cmd.append("--need_mercy")
+        
+        if which_lib != -1:
+            build_cmd += ["--which_lib",str(which_lib)]
 
         try:
             logging.info("--- [%s] Building graph for k = %d ---" % (datetime.now().strftime("%c"), kmer_k))
@@ -855,7 +864,7 @@ def build_graph(kmer_k, kmer_from, num_edge_files):
 
     write_cp()
     if not opt.keep_tmp_files:
-        delete_tmp_after_build(kmer_k)
+        delete_tmp_after_build(kmer_k,which_lib)
     return True
 
 def iterate(cur_k, step):
@@ -869,7 +878,7 @@ def iterate(cur_k, step):
                        "-t", str(opt.num_cpu_threads),
                        "-k", str(cur_k),
                        "-s", str(step),
-                       "-o", graph_prefix(next_k),
+                       "-o", graph_prefix(next_k,-1),
                        "-r", opt.lib + ".bin",
                        "-f", "binary"]
 
@@ -899,7 +908,7 @@ def iterate(cur_k, step):
 
     write_cp()
     if not opt.keep_tmp_files:
-        delete_tmp_after_iter(cur_k)
+        delete_tmp_after_iter(cur_k,which_lib)
 
 def assemble(cur_k):
     global cp
@@ -909,7 +918,7 @@ def assemble(cur_k):
             min_standalone = max(opt.max_tip_len + opt.k_max - 1, opt.min_contig_len)
 
         assembly_cmd = [opt.bin_dir + "megahit_asm_core", "assemble",
-                        "-s", graph_prefix(cur_k),
+                        "-s", graph_prefix(cur_k,-1),
                         "-o", contig_prefix(cur_k),
                         "-t", str(opt.num_cpu_threads),
                         "--min_standalone", str(min_standalone),
@@ -930,6 +939,8 @@ def assemble(cur_k):
 
         if cur_k == opt.k_max:
             assembly_cmd.append("--is_final_round")
+            assembly_cmd.append("--factorize")
+            assembly_cmd.append("4")
 
         if opt.no_bubble:
             assembly_cmd.append("--no_bubble")
@@ -966,7 +977,7 @@ def assemble(cur_k):
 
     write_cp()
     if (not opt.keep_tmp_files) and (cur_k != opt.k_max):
-        delete_tmp_after_assemble(cur_k)
+        delete_tmp_after_assemble(cur_k,-1)
 
 def local_assemble(cur_k, kmer_to):
     global cp
@@ -1075,7 +1086,11 @@ def main(argv = None):
         write_lib()
         build_lib()
 
-        build_first_graph()
+        all_libs = []
+        for l in range(len(opt.pe1)):
+            all_libs += [l]
+
+        build_first_graph(opt.k_min,-1)
 
         if not opt.graph_only:
             assemble(opt.k_min)
@@ -1093,9 +1108,13 @@ def main(argv = None):
 
                 iterate(cur_k, k_step)
 
-                if not build_graph(next_k, cur_k, 1):
+                if not build_graph(next_k, cur_k, 1, -1):
                     opt.k_max = cur_k # for merging cur_k.contigs.fa to final
                     break
+
+                if next_k >= opt.k_max:
+                    for l in all_libs:
+                        build_first_graph(next_k,l)
 
                 assemble(next_k)
                 cur_k = next_k
