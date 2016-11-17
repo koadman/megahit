@@ -204,7 +204,7 @@ int main_assemble(int argc, char **argv) {
             xlog_ext("Done.\n");
             xlog("Number of Edges: %lld; K value: %d\n", (long long)dbg_s[i].size, dbg_s[i].kmer_k);
         }
-        std::string depth_out_fname = opt.sdbg_name + ".unitig_depths.Rdata";
+        std::string depth_out_fname = opt.output_prefix + ".unitig_depths.Rdata";
         unitig_graph.ComputeSampleDepths(dbg_s,depth_out_fname);
     }
 
