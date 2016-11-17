@@ -908,7 +908,7 @@ def iterate(cur_k, step):
 
     write_cp()
     if not opt.keep_tmp_files:
-        delete_tmp_after_iter(cur_k,which_lib)
+        delete_tmp_after_iter(cur_k,-1)
 
 def assemble(cur_k):
     global cp
@@ -940,7 +940,7 @@ def assemble(cur_k):
         if cur_k == opt.k_max:
             assembly_cmd.append("--is_final_round")
             assembly_cmd.append("--factorize")
-            assembly_cmd.append("4")
+            assembly_cmd.append(str(len(opt.pe1)))
 
         if opt.no_bubble:
             assembly_cmd.append("--no_bubble")

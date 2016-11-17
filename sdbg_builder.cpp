@@ -50,6 +50,7 @@ int main_kmer_count(int argc, char **argv) {
     desc.AddOption("assist_seq", "", opt.assist_seq_file, "input assisting fast[aq] file (FILE_NAME.info should exist), can be gzip'ed.");
     desc.AddOption("output_prefix", "", opt.output_prefix, "output prefix");
     desc.AddOption("mem_flag", "", opt.mem_flag, "memory options. 0: minimize memory usage; 1: automatically use moderate memory; other: use all available mem specified by '--host_mem'");
+    desc.AddOption("which_lib", "", opt.which_lib, "Index of the library to use (-1 to use all available libraries)");
 
     try {
         desc.Parse(argc, argv);
@@ -108,6 +109,7 @@ int main_kmer_count(int argc, char **argv) {
     globals.assist_seq_file = opt.assist_seq_file;
     globals.output_prefix = opt.output_prefix.c_str();
     globals.mem_flag = opt.mem_flag;
+    globals.which_lib = opt.which_lib;
 
     xlog("Host memory to be used: %lld\n", (long long)globals.host_mem);
     xlog("Number CPU threads: %d\n", globals.num_cpu_threads);
@@ -267,6 +269,7 @@ int main_seq2sdbg(int argc, char **argv) {
     desc.AddOption("output_prefix", "o", opt.output_prefix, "output prefix");
     desc.AddOption("need_mercy", "", opt.need_mercy, "to add mercy edges. The file input_prefix.cand output by count module should exist.");
     desc.AddOption("mem_flag", "", opt.mem_flag, "memory options. 0: minimize memory usage; 1: automatically use moderate memory; other: use all available mem specified by '--host_mem'");
+    desc.AddOption("which_lib", "", opt.which_lib, "Index of the library to use (-1 to use all available libraries)");
 
     try {
         desc.Parse(argc, argv);
@@ -335,6 +338,7 @@ int main_seq2sdbg(int argc, char **argv) {
     globals.kmer_k = opt.kmer_k;
     globals.kmer_from = opt.kmer_from;
     globals.need_mercy = opt.need_mercy;
+    globals.which_lib = opt.which_lib;
 
     xlog("Host memory to be used: %lld\n", (long long)globals.host_mem);
     xlog("Number CPU threads: %d\n", globals.num_cpu_threads);
